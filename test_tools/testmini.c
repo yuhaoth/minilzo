@@ -53,7 +53,6 @@
 
 #define IN_LEN      (128*1024ul)
 #define OUT_LEN     (IN_LEN + IN_LEN / 16 + 64 + 3)
-
 static unsigned char __LZO_MMODEL in  [ IN_LEN ];
 static unsigned char __LZO_MMODEL out [ OUT_LEN ];
 
@@ -81,11 +80,8 @@ int main(int argc, char *argv[])
 
     if (argc < 0 && argv == NULL)   /* avoid warning about unused args */
         return 0;
-
-    printf("\nLZO real-time data compression library (v%s, %s).\n",
-           lzo_version_string(), lzo_version_date());
-    printf("Copyright (C) 1996-2015 Markus Franz Xaver Johannes Oberhumer\nAll Rights Reserved.\n\n");
-
+	FILE * fp_in , * fp_out;
+    
 
 /*
  * Step 1: initialize the LZO library
@@ -97,51 +93,76 @@ int main(int argc, char *argv[])
         return 3;
     }
 
-/*
- * Step 2: prepare the input block that will get compressed.
- *         We just fill it with zeros in this example program,
- *         but you would use your real-world data here.
- */
-    in_len = IN_LEN;
-    lzo_memset(in,0,in_len);
 
-/*
- * Step 3: compress from 'in' to 'out' with LZO1X-1
- */
-    r = lzo1x_1_compress(in,in_len,out,&out_len,wrkmem);
-    if (r == LZO_E_OK)
-        printf("compressed %lu bytes into %lu bytes\n",
-            (unsigned long) in_len, (unsigned long) out_len);
-    else
-    {
-        /* this should NEVER happen */
-        printf("internal error - compression failed: %d\n", r);
-        return 2;
-    }
-    /* check for an incompressible block */
-    if (out_len >= in_len)
-    {
-        printf("This block contains incompressible data.\n");
-        return 0;
-    }
+	fp_in=fopen(argv[2],"rb");
+	fp_out=fopen(argv[3],"wb");
+	r=-1;
+	switch(argv[1][0]){
+	case 'c':
+		while(!feof(fp_in)){
+			in_len = IN_LEN;
+			lzo_memset(in,0,in_len);
+			in_len=fread(in,1,in_len,fp_in);
+			r = lzo1x_1_compress(in,in_len,out,&out_len,wrkmem);
+			if (r != LZO_E_OK)
+			{
+				/* this should NEVER happen */
+				printf("internal error - compression failed: %d\n", r);
+				goto error;
+			}
+			printf("compressed %lu bytes into %lu bytes\n",
+				(unsigned long) in_len, (unsigned long) out_len);
+			fwrite(out,1,out_len,fp_out);
+		}
+		break;
+	case 'd':
+		while(!feof(fp_in)){
+			in_len = IN_LEN;
+			lzo_memset(in,0,in_len);
+			in_len=fread(in,1,in_len,fp_in);
+			r = lzo1x_1_compress(in,in_len,out,&out_len,wrkmem);
+			if (r != LZO_E_OK)
+			{
+				/* this should NEVER happen */
+				printf("internal error - compression failed: %d\n", r);
+				goto error;
+			}
+			printf("compressed %lu bytes into %lu bytes\n",
+				(unsigned long) in_len, (unsigned long) out_len);
+			fwrite(out,1,out_len,fp_out);
+		}
+		break;
+	default:break;
+	}
+	
+error:
+    fclose(fp_in);
+    fclose(fp_out);
+    return r;
+    ///* check for an incompressible block */
+    //if (out_len >= in_len)
+    //{
+        //printf("This block contains incompressible data.\n");
+        //return 0;
+    //}
 
-/*
- * Step 4: decompress again, now going from 'out' to 'in'
- */
-    new_len = in_len;
-    r = lzo1x_decompress(out,out_len,in,&new_len,NULL);
-    if (r == LZO_E_OK && new_len == in_len)
-        printf("decompressed %lu bytes back into %lu bytes\n",
-            (unsigned long) out_len, (unsigned long) in_len);
-    else
-    {
-        /* this should NEVER happen */
-        printf("internal error - decompression failed: %d\n", r);
-        return 1;
-    }
+///*
+ //* Step 4: decompress again, now going from 'out' to 'in'
+ //*/
+    //new_len = in_len;
+    //r = lzo1x_decompress(out,out_len,in,&new_len,NULL);
+    //if (r == LZO_E_OK && new_len == in_len)
+        //printf("decompressed %lu bytes back into %lu bytes\n",
+            //(unsigned long) out_len, (unsigned long) in_len);
+    //else
+    //{
+        ///* this should NEVER happen */
+        //printf("internal error - decompression failed: %d\n", r);
+        //return 1;
+    //}
 
-    printf("\nminiLZO simple compression test passed.\n");
-    return 0;
+    //printf("\nminiLZO simple compression test passed.\n");
+    //return 0;
 }
 
 
